@@ -1,0 +1,37 @@
+{
+  "pages": {
+    "/_app": [
+      "static/chunks/0oik_next_dist_compiled_0ry1864._.js",
+      "static/chunks/0oik_next_dist_shared_lib_0d6l8s2._.js",
+      "static/chunks/0oik_next_dist_client_0.0p0al._.js",
+      "static/chunks/0oik_next_dist_0dmom2p._.js",
+      "static/chunks/0oik_next_app_07p3jiw.js",
+      "static/chunks/[next]_entry_page-loader_ts_00bazgl._.js",
+      "static/chunks/0oik_react-dom_06qcqfp._.js",
+      "static/chunks/0oik_0wgsuft._.js",
+      "static/chunks/[root-of-the-server]__138aw3c._.js",
+      "static/chunks/Desktop_donbugi_Donbugi-FE_pages__app_07xvfw~._.js",
+      "static/chunks/turbopack-Desktop_donbugi_Donbugi-FE_pages__app_0.qie3b._.js"
+    ],
+    "/_error": [
+      "static/chunks/0oik_next_dist_compiled_0ry1864._.js",
+      "static/chunks/0oik_next_dist_shared_lib_0fei.df._.js",
+      "static/chunks/0oik_next_dist_client_0.0p0al._.js",
+      "static/chunks/0oik_next_dist_0ys1e5f._.js",
+      "static/chunks/[next]_entry_page-loader_ts_0eq3csc._.js",
+      "static/chunks/0oik_react-dom_06qcqfp._.js",
+      "static/chunks/0oik_0wgsuft._.js",
+      "static/chunks/[root-of-the-server]__0k5-qbm._.js",
+      "static/chunks/Desktop_donbugi_Donbugi-FE_pages__error_07xvfw~._.js",
+      "static/chunks/turbopack-Desktop_donbugi_Donbugi-FE_pages__error_0ny_-el._.js"
+    ]
+  },
+  "devFiles": [],
+  "polyfillFiles": [],
+  "lowPriorityFiles": [
+    "static/development/_buildManifest.js",
+    "static/development/_ssgManifest.js",
+    "static/development/_clientMiddlewareManifest.js"
+  ],
+  "rootMainFiles": []
+}
