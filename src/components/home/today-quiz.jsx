@@ -107,11 +107,11 @@ export function TodayQuiz() {
     try {
       setRewardRequested(true);
 
-      const results = quizzes.map((quiz) => ({
-        order: quiz.order,
-        attempted: !!nextQDone[quiz.id],
-        correct: !!nextQDone[quiz.id]?.correct,
-      }));
+      const results = quizzes.map((quiz, index) => ({
+      order: Number(quiz.order || index + 1),
+      attempted: !!nextQDone[quiz.id],
+      correct: !!nextQDone[quiz.id]?.correct,
+    }));
 
       const rewardResult = await pointApi.rewardDailyQuiz({
         userId,
