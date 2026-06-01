@@ -113,6 +113,12 @@ export function TodayQuiz() {
         correct: !!nextQDone[quiz.id]?.correct,
       }));
 
+      console.log({
+  userId,
+  sessionId,
+  results,
+});
+
       const rewardResult = await pointApi.rewardDailyQuiz({
         userId,
         sessionId,

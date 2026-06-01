@@ -2,18 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { useApp, KOSPI_STATUS, CHARS } from "@/lib/app-context";
-import { getStoredUserId, pointApi, notificationApi } from "@/lib/api";
+import { getStoredUserId, pointApi, notificationApi, mainApi } from "@/lib/api";
 
 export function ProfileArea() {
-  const {
-    userNick,
-    userChar,
-    setNotifOpen,
-    notifBadge,
-    setNotifBadge,
-    setMarketTempOpen,
-    currentKospiStatus,
-  } = useApp();
+const {
+  userNick,
+  userChar,
+  setNotifOpen,
+  notifBadge,
+  setNotifBadge,
+  setMarketTempOpen,
+  currentKospiStatus,
+  economicWeather,
+  setEconomicWeather,
+  setCurrentKospiStatus,
+} = useApp();
 
   const char = userChar || CHARS[0];
   const kospi = KOSPI_STATUS[currentKospiStatus];
@@ -40,6 +43,19 @@ export function ProfileArea() {
     }
   };
 
+    const fetchEconomicWeather = async () => {
+  try {
+    const data = await mainApi.getEconomicWeather();
+    console.log("weatherCode 확인:", data?.weatherCode); // ← 이 줄 추가
+    console.log("경제 날씨", data);
+    setEconomicWeather(data);
+    if (data?.weatherCode) {
+      setCurrentKospiStatus(data.weatherCode);
+    }
+  } catch (error) {
+    console.error("경제 날씨 조회 실패:", error);
+  }
+};
   // 앱 마운트 시 실제 unreadCount로 뱃지 초기화
   const fetchUnreadCount = async () => {
     try {
@@ -51,10 +67,11 @@ export function ProfileArea() {
     }
   };
 
-  useEffect(() => {
-    fetchPointBalance();
-    fetchUnreadCount();
-  }, []);
+ useEffect(() => {
+  fetchPointBalance();
+  fetchUnreadCount();
+  fetchEconomicWeather();
+}, []);
 
   return (
     <section className="relative mx-4 mt-4 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#7C3AED] to-[#A855F7] px-5 py-5 text-white shadow-[0_16px_35px_rgba(124,58,237,0.25)]">
@@ -77,9 +94,9 @@ export function ProfileArea() {
             onClick={() => setMarketTempOpen(true)}
             className="rounded-2xl bg-white/16 px-3 py-2 text-left active:scale-[0.98]"
           >
-            <div className="text-[15px]">{kospi.icon}</div>
+            <div className="text-[15px]">{economicWeather?.emoji || kospi?.icon}</div>
             <div className="text-[10px] font-bold text-white/70">시장 날씨</div>
-            <div className="text-[11px] font-black text-white">{kospi.label}</div>
+            <div className="text-[11px] font-black text-white">{economicWeather?.weatherLabel || kospi?.label}</div>
           </button>
 
           <button
