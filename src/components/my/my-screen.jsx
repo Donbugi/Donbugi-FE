@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useApp, CHARS } from "@/lib/app-context";
-import { getStoredUserId, quizApi, pointApi } from "@/lib/api";
+import { getStoredUserId, pointApi, quizApi } from "@/lib/api";
 
 function getRateText(stats) {
   if (!stats || typeof stats.ratePercent !== "number") {
@@ -40,36 +40,55 @@ function formatDateTime(value) {
   }
 }
 
-function getActivityIcon(type) {
-  const iconMap = {
-    ATTENDANCE: "🔥",
-    DAILY_QUIZ: "⚔️",
-    NEWS_QUIZ: "🧩",
-    REDEEM: "🎁",
-    BONUS: "🌟",
-  };
-  return iconMap[type] ?? "💰";
+function formatPointDelta(delta) {
+  if (typeof delta !== "number") {
+    return "0P";
+  }
+
+  return delta > 0 ? `+${delta}P` : `${delta}P`;
+}
+
+function getPointIcon(type) {
+  if (!type) {
+    return "💰";
+  }
+
+  const upperType = String(type).toUpperCase();
+
+  if (upperType.includes("ATTENDANCE")) {
+    return "🔥";
+  }
+
+  if (upperType.includes("QUIZ")) {
+    return "⚔️";
+  }
+
+  if (
+    upperType.includes("REDEEM") ||
+    upperType.includes("SPEND") ||
+    upperType.includes("USE")
+  ) {
+    return "🎁";
+  }
+
+  return "💰";
 }
 
 export function MyScreen() {
   const { userNick, userChar, toast } = useApp();
   const char = userChar || CHARS[0];
 
-  // 퀴즈 대시보드
   const [dashboard, setDashboard] = useState(null);
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(true);
   const [dashboardError, setDashboardError] = useState("");
 
-  // 포인트 잔액
-  const [balance, setBalance] = useState(null);
-  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
-
-  // 출석 상태
-  const [attendanceStatus, setAttendanceStatus] = useState(null);
-
-  // 최근 포인트 내역
+  const [pointBalance, setPointBalance] = useState(0);
+  const [monthlySummary, setMonthlySummary] = useState(null);
   const [recentActivity, setRecentActivity] = useState([]);
-  const [isLoadingActivity, setIsLoadingActivity] = useState(true);
+  const [attendanceStatus, setAttendanceStatus] = useState(null);
+  const [isLoadingPoints, setIsLoadingPoints] = useState(true);
+  const [pointError, setPointError] = useState("");
+  const [isCheckingAttendance, setIsCheckingAttendance] = useState(false);
 
   const fetchQuizDashboard = async () => {
     const userId = getStoredUserId();
@@ -98,30 +117,66 @@ export function MyScreen() {
 
   const fetchPointData = async () => {
     const userId = getStoredUserId();
-    if (!userId) return;
+
+    if (!userId) {
+      setPointBalance(0);
+      setMonthlySummary(null);
+      setRecentActivity([]);
+      setAttendanceStatus(null);
+      setPointError("로그인 후 포인트 정보를 확인할 수 있어요.");
+      setIsLoadingPoints(false);
+      return;
+    }
 
     try {
-      setIsLoadingBalance(true);
-      const [balanceData, activityData, statusData] = await Promise.allSettled([
-        pointApi.getBalance(userId),
-        pointApi.getRecentActivity(userId),
-        pointApi.getAttendanceStatus(userId),
-      ]);
+      setIsLoadingPoints(true);
+      setPointError("");
 
-      if (balanceData.status === "fulfilled") {
-        setBalance(balanceData.value);
-      }
-      if (activityData.status === "fulfilled") {
-        setRecentActivity(activityData.value ?? []);
-      }
-      if (statusData.status === "fulfilled") {
-        setAttendanceStatus(statusData.value);
-      }
+      const [balanceData, monthlyData, recentData, attendanceData] =
+        await Promise.all([
+          pointApi.getBalance(userId),
+          pointApi.getMonthlySummary({ userId }),
+          pointApi.getRecentActivity(userId),
+          pointApi.getAttendanceStatus(userId),
+        ]);
+
+      setPointBalance(balanceData?.balance ?? 0);
+      setMonthlySummary(monthlyData ?? null);
+      setRecentActivity(Array.isArray(recentData) ? recentData : []);
+      setAttendanceStatus(attendanceData ?? null);
     } catch (error) {
-      console.error("포인트 데이터 조회 실패:", error);
+      console.error("포인트 정보 조회 실패:", error);
+      setPointError(error.message || "포인트 정보를 불러오지 못했어요.");
+      toast?.("⚠️ 포인트 정보를 불러오지 못했어요.");
     } finally {
-      setIsLoadingBalance(false);
-      setIsLoadingActivity(false);
+      setIsLoadingPoints(false);
+    }
+  };
+
+  const handleAttendanceCheck = async () => {
+    const userId = getStoredUserId();
+
+    if (!userId) {
+      toast?.("로그인 후 출석 체크를 할 수 있어요.");
+      return;
+    }
+
+    try {
+      setIsCheckingAttendance(true);
+
+      await pointApi.checkAttendance({
+        userId,
+        date: new Date().toISOString().slice(0, 10),
+      });
+
+      await fetchPointData();
+
+      toast?.("🔥 출석 체크가 완료되었어요!");
+    } catch (error) {
+      console.error("출석 체크 실패:", error);
+      toast?.(error.message || "출석 체크에 실패했어요.");
+    } finally {
+      setIsCheckingAttendance(false);
     }
   };
 
@@ -157,20 +212,41 @@ export function MyScreen() {
         <div className="mt-5 grid grid-cols-2 gap-3">
           <div className="rounded-2xl bg-white/16 p-4">
             <div className="text-[24px] font-black">
-              {isLoadingBalance ? "…" : `${balance?.balance ?? 0}`}
+              {isLoadingPoints ? "..." : pointBalance.toLocaleString()}
             </div>
-            <div className="text-[12px] font-bold text-white/75">포인트</div>
+            <div className="text-[12px] font-bold text-white/75">FinIQ</div>
           </div>
 
           <div className="rounded-2xl bg-white/16 p-4">
             <div className="text-[24px] font-black">
-              {attendanceStatus?.currentStreakDays ?? 0}일
+              {isLoadingPoints
+                ? "..."
+                : `${attendanceStatus?.currentStreakDays ?? 0}일`}
             </div>
             <div className="text-[12px] font-bold text-white/75">
               연속 출석
             </div>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={handleAttendanceCheck}
+          disabled={
+            isCheckingAttendance || attendanceStatus?.checkedInToday === true
+          }
+          className={`mt-4 w-full rounded-2xl px-4 py-3 text-[14px] font-black transition ${
+            attendanceStatus?.checkedInToday
+              ? "bg-white/20 text-white/70"
+              : "bg-white text-[#7C3AED] active:scale-[0.98]"
+          }`}
+        >
+          {isCheckingAttendance
+            ? "출석 체크 중..."
+            : attendanceStatus?.checkedInToday
+              ? "오늘 출석 완료"
+              : "오늘 출석 체크하기"}
+        </button>
       </section>
 
       {/* Evolution Card */}
@@ -180,7 +256,7 @@ export function MyScreen() {
         </h2>
 
         <p className="mt-1 text-[13px] font-bold text-[#8888aa]">
-          현재 {char.lvLabel} · 다음 단계까지 760P
+          현재 {char.lvLabel} · 현재 보유 {pointBalance.toLocaleString()}P
         </p>
 
         <div className="mt-4 flex items-center justify-between">
@@ -209,6 +285,72 @@ export function MyScreen() {
             );
           })}
         </div>
+      </section>
+
+      {/* Point Summary */}
+      <section className="mx-4 mt-4 rounded-[22px] bg-white p-5 shadow-[0_2px_16px_rgba(60,60,120,0.10)]">
+        <div className="flex items-center justify-between">
+          <h2 className="text-[17px] font-black text-[#1a1a2e]">
+            포인트 요약
+          </h2>
+
+          <button
+            type="button"
+            onClick={fetchPointData}
+            className="text-[12px] font-black text-[#7C3AED]"
+          >
+            새로고침
+          </button>
+        </div>
+
+        {isLoadingPoints && (
+          <div className="mt-4 rounded-xl bg-[#F7F3FF] p-4 text-center text-[13px] font-bold text-[#7C3AED]">
+            포인트 정보를 불러오는 중이에요
+          </div>
+        )}
+
+        {!isLoadingPoints && pointError && (
+          <div className="mt-4 rounded-xl bg-[#FFF5F7] p-4 text-center text-[13px] font-bold text-[#c0243a]">
+            {pointError}
+          </div>
+        )}
+
+        {!isLoadingPoints && !pointError && (
+          <>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <div className="rounded-2xl bg-[#F7F3FF] p-3 text-center">
+                <div className="text-[11px] font-black text-[#8888aa]">
+                  이번 달 적립
+                </div>
+                <div className="mt-2 text-[18px] font-black text-[#7C3AED]">
+                  {(monthlySummary?.earnedPoints ?? 0).toLocaleString()}P
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-[#FFF5F7] p-3 text-center">
+                <div className="text-[11px] font-black text-[#8888aa]">
+                  이번 달 사용
+                </div>
+                <div className="mt-2 text-[18px] font-black text-[#FF4D6D]">
+                  {(monthlySummary?.spentPoints ?? 0).toLocaleString()}P
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-[#F0FAF7] p-3 text-center">
+                <div className="text-[11px] font-black text-[#8888aa]">
+                  순 포인트
+                </div>
+                <div className="mt-2 text-[18px] font-black text-[#3CBBA2]">
+                  {(monthlySummary?.netPoints ?? 0).toLocaleString()}P
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 rounded-xl bg-[#faf8ff] p-3 text-[12px] font-bold text-[#7A728C]">
+              이번 달 포인트 요약이에요.
+            </div>
+          </>
+        )}
       </section>
 
       {/* News Trends */}
@@ -368,40 +510,47 @@ export function MyScreen() {
         <h2 className="text-[17px] font-black text-[#1a1a2e]">내역</h2>
 
         <p className="mt-1 text-[13px] font-bold text-[#8888aa]">
-          포인트 적립 및 사용 내역 (최근 3건)
+          포인트 적립 및 사용 내역
         </p>
 
-        {isLoadingActivity && (
+        {isLoadingPoints && (
           <div className="mt-4 rounded-xl bg-[#F7F3FF] p-4 text-center text-[13px] font-bold text-[#7C3AED]">
-            내역을 불러오는 중이에요
+            포인트 내역을 불러오는 중이에요
           </div>
         )}
 
-        {!isLoadingActivity && recentActivity.length === 0 && (
-          <div className="mt-4 rounded-xl bg-[#F7F3FF] p-4 text-center text-[13px] font-bold text-[#8888aa]">
-            아직 포인트 내역이 없어요
+        {!isLoadingPoints && pointError && (
+          <div className="mt-4 rounded-xl bg-[#FFF5F7] p-4 text-center text-[13px] font-bold text-[#c0243a]">
+            {pointError}
           </div>
         )}
 
-        {!isLoadingActivity && recentActivity.length > 0 && (
+        {!isLoadingPoints && !pointError && recentActivity.length === 0 && (
+          <div className="mt-4 rounded-xl bg-[#faf8ff] p-4 text-center text-[13px] font-bold text-[#8888aa]">
+            아직 포인트 내역이 없어요.
+          </div>
+        )}
+
+        {!isLoadingPoints && !pointError && recentActivity.length > 0 && (
           <div className="mt-3 space-y-3">
-            {recentActivity.map((item, index) => {
-              const isPlus = item.delta > 0;
+            {recentActivity.slice(0, 3).map((item, index) => {
+              const isPlus = (item.delta ?? 0) > 0;
+
               return (
                 <div
-                  key={item.relatedRef ?? index}
+                  key={`${item.type}-${item.occurredAt}-${index}`}
                   className="flex items-center gap-3 rounded-2xl bg-[#faf8ff] p-3"
                 >
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-[22px]">
-                    {getActivityIcon(item.type)}
+                    {getPointIcon(item.type)}
                   </div>
 
                   <div className="flex-1">
                     <div className="text-[13px] font-black text-[#1a1a2e]">
-                      {item.title}
+                      {item.title || "포인트 내역"}
                     </div>
                     <div className="mt-1 text-[11px] font-bold text-[#8888aa]">
-                      {formatDateTime(item.occurredAt)}
+                      {item.detail || formatDateTime(item.occurredAt)}
                     </div>
                   </div>
 
@@ -410,8 +559,7 @@ export function MyScreen() {
                       isPlus ? "text-[#3CBBA2]" : "text-[#FF4D6D]"
                     }`}
                   >
-                    {isPlus ? "+" : ""}
-                    {item.delta}P
+                    {formatPointDelta(item.delta)}
                   </div>
                 </div>
               );
