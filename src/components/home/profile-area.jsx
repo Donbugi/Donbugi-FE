@@ -131,7 +131,7 @@ export function ProfileArea() {
       <div className="relative z-10 flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className="relative flex h-[66px] w-[66px] items-center justify-center rounded-3xl bg-white/20 text-[34px] backdrop-blur">
-            <span>{displayChar.emoji || "🐥"}</span>
+            <span>{displayChar.emoji}</span>
             <span className="absolute -bottom-2 rounded-full bg-white px-2 py-0.5 text-[11px] font-extrabold text-[#7C3AED] shadow">
               {displayChar.lvLabel || `Lv.${displayChar.lv || 1}`}
             </span>
