@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useApp, OBQ, CHARS } from "@/lib/app-context";
 
+const USER_CHAR_KEY = "donbugi_user_char";
+
 export function OnboardingScreen() {
   const { obStep, setObStep, obScores, setObScores, goToScreen, setUserChar } =
     useApp();
@@ -12,15 +14,24 @@ export function OnboardingScreen() {
   const currentQ = OBQ[obStep];
   const isLastStep = obStep === OBQ.length - 1;
   const canProceed = selectedOption !== null;
-
   const optionScores = [1, 2, 3, 5];
+
+  const saveCharacterToBrowser = (char) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    localStorage.setItem(USER_CHAR_KEY, JSON.stringify(char));
+  };
 
   const handleSelect = (score) => {
     setSelectedOption(score);
   };
 
   const handleNext = () => {
-    if (!canProceed) return;
+    if (!canProceed) {
+      return;
+    }
 
     const updatedScores = [...obScores];
     updatedScores[obStep] = selectedOption;
@@ -41,82 +52,76 @@ export function OnboardingScreen() {
 
       setObScores(updatedScores);
       setUserChar(char);
+      saveCharacterToBrowser(char);
       goToScreen("result");
-    } else {
-      setObScores(updatedScores);
-      setObStep(obStep + 1);
-      setSelectedOption(null);
+      return;
     }
+
+    setObScores(updatedScores);
+    setObStep(obStep + 1);
+    setSelectedOption(null);
   };
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
-      <div className="flex-1 overflow-y-auto hide-scrollbar flex flex-col">
-        <div className="bg-gradient-to-br from-[#7C3AED] to-[#5b21b6] px-6 pt-7 pb-6 text-white flex-shrink-0">
-          <div className="flex gap-1.5 mb-5">
+    <div className="min-h-screen bg-[#F7F3FF] px-6 py-10">
+      <section className="mx-auto w-full max-w-[430px]">
+        <div className="mb-7">
+          <div className="mb-4 flex items-center gap-2">
             {[0, 1, 2, 3].map((i) => (
               <div
                 key={i}
-                className={`flex-1 h-1 rounded-sm transition-colors ${
-                  i <= obStep ? "bg-white" : "bg-white/30"
+                className={`h-2 flex-1 rounded-full ${
+                  i <= obStep ? "bg-[#7C3AED]" : "bg-[#E5D9FF]"
                 }`}
               />
             ))}
           </div>
 
-          <div className="text-[13px] opacity-80 mb-2 font-bold">
+          <p className="text-[14px] font-bold text-[#7C3AED]">
             질문 {obStep + 1} / {OBQ.length}
-          </div>
-
-          <div className="text-[19px] font-black leading-[1.4]">
+          </p>
+          <h1 className="mt-3 text-[26px] font-extrabold leading-snug text-[#1a1a2e]">
             {currentQ.q}
-          </div>
-
-          <div className="text-[13px] opacity-75 mt-1.5">👉 {currentQ.sub}</div>
+          </h1>
+          <p className="mt-2 text-[15px] font-semibold text-[#7A728C]">
+            {currentQ.sub}
+          </p>
         </div>
 
-        <div className="p-5 pb-7 flex flex-col gap-2.5 flex-1">
+        <div className="space-y-3">
           {currentQ.opts.map((opt, i) => {
             const score = optionScores[i];
             const isSelected = selectedOption === score;
 
             return (
-              <div
-                key={i}
+              <button
+                key={opt.t}
+                type="button"
                 onClick={() => handleSelect(score)}
-                className={`bg-white border-2 rounded-[14px] py-4 px-[18px] cursor-pointer transition-all flex items-center gap-3 ${
+                className={`flex w-full items-center gap-3 rounded-[18px] border-2 px-5 py-4 text-left text-[15px] font-bold transition-all ${
                   isSelected
-                    ? "border-[#7C3AED] bg-[rgba(124,58,237,0.06)]"
-                    : "border-[#e8e0ff] hover:border-[#7C3AED]"
+                    ? "border-[#7C3AED] bg-[rgba(124,58,237,0.06)] text-[#7C3AED]"
+                    : "border-[#e8e0ff] bg-white text-[#1a1a2e] hover:border-[#7C3AED]"
                 }`}
               >
-                <div
-                  className={`w-9 h-9 rounded-[10px] flex items-center justify-center text-[18px] flex-shrink-0 ${
-                    isSelected ? "bg-[#7C3AED]" : "bg-[rgba(124,58,237,0.08)]"
-                  }`}
-                >
-                  {opt.e}
-                </div>
-
-                <div className="flex-1">
-                  <div className="text-sm font-black text-[#1a1a2e]">
-                    {String.fromCharCode(65 + i)}. {opt.t}
-                  </div>
-                </div>
-              </div>
+                <span className="text-[22px]">{opt.e}</span>
+                <span>
+                  {String.fromCharCode(65 + i)}. {opt.t}
+                </span>
+              </button>
             );
           })}
         </div>
 
         <button
+          type="button"
           onClick={handleNext}
-          className={`mx-5 mb-7 py-[15px] bg-gradient-to-r from-[#7C3AED] to-[#3CBBA2] text-white border-none rounded-[14px] text-[16px] font-black cursor-pointer transition-opacity flex-shrink-0 ${
-            canProceed ? "opacity-100" : "opacity-40 pointer-events-none"
-          }`}
+          disabled={!canProceed}
+          className="mt-8 w-full rounded-[18px] bg-[#7C3AED] py-4 text-[16px] font-extrabold text-white shadow-[0_10px_24px_rgba(124,58,237,0.28)] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isLastStep ? "결과 보기 🎯" : "다음으로 →"}
+          {isLastStep ? "결과 보기 →" : "다음으로 →"}
         </button>
-      </div>
+      </section>
     </div>
   );
 }

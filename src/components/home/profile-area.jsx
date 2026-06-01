@@ -1,65 +1,154 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useApp, KOSPI_STATUS, CHARS } from "@/lib/app-context";
+import { authApi } from "@/lib/api";
+
+const NICKNAME_KEY = "donbugi_nickname";
+const USER_CHAR_KEY = "donbugi_user_char";
 
 export function ProfileArea() {
   const {
     userNick,
+    setUserNick,
     userChar,
+    setUserChar,
     setNotifOpen,
     notifBadge,
     setMarketTempOpen,
     currentKospiStatus,
   } = useApp();
 
-  const char = userChar || CHARS[0];
+  const [displayNick, setDisplayNick] = useState(userNick || "닉네임");
+  const [displayChar, setDisplayChar] = useState(userChar || CHARS[0]);
+
   const kospi = KOSPI_STATUS[currentKospiStatus];
 
-  return (
-    <div className="flex-shrink-0 bg-gradient-to-br from-[#7C3AED] via-[#5b21b6] to-[#3CBBA2] px-5 pt-4 pb-[22px] relative overflow-hidden">
-      {/* Background circle */}
-      <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/[0.08] rounded-full" />
+  useEffect(() => {
+    const loadSavedUserInfo = async () => {
+      if (typeof window !== "undefined") {
+        const savedNickname = localStorage.getItem(NICKNAME_KEY);
+        const savedCharacter = localStorage.getItem(USER_CHAR_KEY);
 
-      {/* Top Row */}
-      <div className="flex justify-between items-start mb-3">
+        if (savedNickname) {
+          setDisplayNick(savedNickname);
+          setUserNick(savedNickname);
+        }
+
+        if (savedCharacter) {
+          try {
+            const parsedCharacter = JSON.parse(savedCharacter);
+
+            setDisplayChar(parsedCharacter);
+            setUserChar(parsedCharacter);
+          } catch (error) {
+            console.error("캐릭터 정보 파싱 실패:", error);
+          }
+        }
+      }
+
+      try {
+        const profile = await authApi.getMe();
+
+        if (profile?.nickname) {
+          setDisplayNick(profile.nickname);
+          setUserNick(profile.nickname);
+
+          if (typeof window !== "undefined") {
+            localStorage.setItem(NICKNAME_KEY, profile.nickname);
+          }
+        }
+
+        if (profile?.characterName || profile?.characterEmoji) {
+          const level = profile.characterLevel || profile.finIqLevel || 1;
+
+          const serverCharacter = {
+            lv: level,
+            emoji: profile.characterEmoji || displayChar.emoji || "🐥",
+            name: profile.characterName || displayChar.name || "병아리",
+            tag: displayChar.tag || `Lv.${level}`,
+            desc:
+              displayChar.desc ||
+              "돈부기와 함께 금융 지능을 키워가는 중이에요.",
+            features: displayChar.features || [],
+            lvLabel: `Lv.${level}`,
+          };
+
+          setDisplayChar(serverCharacter);
+          setUserChar(serverCharacter);
+
+          if (typeof window !== "undefined") {
+            localStorage.setItem(
+              USER_CHAR_KEY,
+              JSON.stringify(serverCharacter)
+            );
+          }
+        }
+      } catch (error) {
+        console.error("프로필 조회 실패:", error);
+      }
+    };
+
+    loadSavedUserInfo();
+  }, [setUserNick, setUserChar]);
+
+  useEffect(() => {
+    if (userNick && userNick !== "닉네임") {
+      setDisplayNick(userNick);
+    }
+  }, [userNick]);
+
+  useEffect(() => {
+    if (userChar) {
+      setDisplayChar(userChar);
+    }
+  }, [userChar]);
+
+  return (
+    <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#7C3AED] to-[#A855F7] px-5 py-5 text-white shadow-[0_16px_35px_rgba(124,58,237,0.25)]">
+      <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/10" />
+      <div className="absolute -bottom-16 -left-12 h-40 w-40 rounded-full bg-white/10" />
+
+      <div className="relative z-10 flex items-start justify-between">
         <div className="flex items-center gap-3">
-          {/* Avatar */}
-          <div className="w-16 h-16 bg-white/20 rounded-full border-[3px] border-white/50 flex items-center justify-center text-[32px] relative animate-float">
-            <span>{char.emoji}</span>
-            <div className="absolute -bottom-1 -right-1 bg-[#FF9F1C] text-white text-[10px] font-black py-[2px] px-1.5 rounded-lg border-2 border-white">
-              {char.lvLabel}
-            </div>
+          <div className="relative flex h-[66px] w-[66px] items-center justify-center rounded-3xl bg-white/20 text-[34px] backdrop-blur">
+            <span>{displayChar.emoji || "🐥"}</span>
+            <span className="absolute -bottom-2 rounded-full bg-white px-2 py-0.5 text-[11px] font-extrabold text-[#7C3AED] shadow">
+              {displayChar.lvLabel || `Lv.${displayChar.lv || 1}`}
+            </span>
           </div>
 
-          {/* User Info */}
-          <div className="text-white">
-            <div className="text-[13px] opacity-85 mb-[2px]">안녕하세요!</div>
-            <div className="text-[18px] font-black tracking-[-0.5px]">
-              {userNick}님 👋
-            </div>
+          <div>
+            <p className="text-[14px] font-semibold text-white/80">
+              안녕하세요!
+            </p>
+            <h2 className="mt-1 text-[24px] font-extrabold">
+              {displayNick}님
+            </h2>
           </div>
         </div>
 
-        {/* Right Section */}
-        <div className="flex gap-2.5 items-start">
-          {/* Market Temp */}
-          <div
-            className="bg-white/15 rounded-[14px] py-2.5 px-3.5 text-center text-white backdrop-blur-[10px] cursor-pointer transition-colors hover:bg-white/25"
-            onClick={() => setMarketTempOpen(true)}
-          >
-            <div className="text-[24px]">{kospi.icon}</div>
-            <div className="text-[10px] opacity-80">시장 날씨</div>
-            <div className="text-[12px] font-bold">{kospi.label}</div>
-          </div>
-
-          {/* Bell Button */}
+        <div className="flex items-center gap-2">
           <button
-            className="bg-white/15 border-none rounded-full w-[42px] h-[42px] flex items-center justify-center cursor-pointer relative"
-            onClick={() => setNotifOpen(true)}
+            type="button"
+            onClick={() => setMarketTempOpen(true)}
+            className="rounded-2xl bg-white/18 px-3 py-2 text-left shadow-sm backdrop-blur"
           >
-            <span className="text-[20px]">🔔</span>
+            <div className="text-[18px] leading-none">{kospi.icon}</div>
+            <div className="mt-1 text-[10px] font-semibold text-white/75">
+              시장 날씨
+            </div>
+            <div className="text-[12px] font-extrabold">{kospi.label}</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setNotifOpen(true)}
+            className="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-white/18 text-[22px] shadow-sm backdrop-blur"
+          >
+            🔔
             {notifBadge > 0 && (
-              <span className="absolute -top-1 -right-1 bg-[#FF4D6D] text-white text-[11px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white/40">
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#FF4D6D] px-1 text-[11px] font-extrabold text-white">
                 {notifBadge}
               </span>
             )}
@@ -67,24 +156,22 @@ export function ProfileArea() {
         </div>
       </div>
 
-      {/* FinIQ Bar */}
-      <div className="bg-white/15 rounded-xl py-2.5 px-3.5 text-white">
-        <div className="flex justify-between text-[12px] mb-1.5">
-          <span className="font-bold text-[13px]">
-            💎 금융 지능 지수 (FinIQ)
+      <div className="relative z-10 mt-5 rounded-2xl bg-white/16 px-4 py-4 backdrop-blur">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[13px] font-bold text-white/85">
+            금융 지능 지수 (FinIQ)
           </span>
-          <span className="font-black text-[#ffd700]">3,240P</span>
+          <span className="text-[15px] font-extrabold">3,240P</span>
         </div>
-        <div className="h-2 bg-white/25 rounded overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-[#ffd700] to-[#ffec6e] rounded animate-expand-fill"
-            style={{ width: "72%" }}
-          />
+
+        <div className="h-3 overflow-hidden rounded-full bg-white/25">
+          <div className="h-full w-[76%] rounded-full bg-white" />
         </div>
-        <div className="text-[11px] text-white/70 mt-1 text-right">
+
+        <p className="mt-2 text-[12px] font-semibold text-white/75">
           다음 레벨까지 760P
-        </div>
+        </p>
       </div>
-    </div>
+    </section>
   );
 }
