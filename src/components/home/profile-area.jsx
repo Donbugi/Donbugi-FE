@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useApp, KOSPI_STATUS, CHARS } from "@/lib/app-context";
-import { getStoredUserId, pointApi } from "@/lib/api";
+import { getStoredUserId, pointApi, notificationApi } from "@/lib/api";
 
 export function ProfileArea() {
   const {
@@ -10,6 +10,7 @@ export function ProfileArea() {
     userChar,
     setNotifOpen,
     notifBadge,
+    setNotifBadge,
     setMarketTempOpen,
     currentKospiStatus,
   } = useApp();
@@ -22,16 +23,13 @@ export function ProfileArea() {
 
   const fetchPointBalance = async () => {
     const userId = getStoredUserId();
-
     if (!userId) {
       setPointBalance(0);
       setIsLoadingPoint(false);
       return;
     }
-
     try {
       setIsLoadingPoint(true);
-
       const data = await pointApi.getBalance(userId);
       setPointBalance(data?.balance ?? 0);
     } catch (error) {
@@ -42,30 +40,34 @@ export function ProfileArea() {
     }
   };
 
+  // 앱 마운트 시 실제 unreadCount로 뱃지 초기화
+  const fetchUnreadCount = async () => {
+    try {
+      const data = await notificationApi.getNotifications();
+      setNotifBadge(data?.unreadCount ?? 0);
+    } catch (err) {
+      console.error("알림 뱃지 초기화 실패:", err);
+      setNotifBadge(0);
+    }
+  };
+
   useEffect(() => {
     fetchPointBalance();
+    fetchUnreadCount();
   }, []);
 
   return (
     <section className="relative mx-4 mt-4 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#7C3AED] to-[#A855F7] px-5 py-5 text-white shadow-[0_16px_35px_rgba(124,58,237,0.25)]">
-      <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10" />
 
       <div className="relative z-10 flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-[64px] w-[64px] items-center justify-center rounded-[24px] bg-white/20 text-[36px]">
             {char.emoji}
           </div>
-
           <div>
-            <div className="text-[12px] font-bold text-white/75">
-              안녕하세요!
-            </div>
-            <h1 className="mt-1 text-[22px] font-black leading-tight">
-              {userNick}님
-            </h1>
-            <p className="mt-1 text-[12px] font-bold text-white/80">
-              {char.lvLabel}
-            </p>
+            <div className="text-[12px] font-bold text-white/75">안녕하세요!</div>
+            <h1 className="mt-1 text-[22px] font-black leading-tight">{userNick}님</h1>
+            <p className="mt-1 text-[12px] font-bold text-white/80">{char.lvLabel}</p>
           </div>
         </div>
 
@@ -76,12 +78,8 @@ export function ProfileArea() {
             className="rounded-2xl bg-white/16 px-3 py-2 text-left active:scale-[0.98]"
           >
             <div className="text-[15px]">{kospi.icon}</div>
-            <div className="text-[10px] font-bold text-white/70">
-              시장 날씨
-            </div>
-            <div className="text-[11px] font-black text-white">
-              {kospi.label}
-            </div>
+            <div className="text-[10px] font-bold text-white/70">시장 날씨</div>
+            <div className="text-[11px] font-black text-white">{kospi.label}</div>
           </button>
 
           <button
@@ -106,19 +104,13 @@ export function ProfileArea() {
             {isLoadingPoint ? "..." : `${pointBalance.toLocaleString()}P`}
           </div>
         </div>
-
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/20">
           <div
             className="h-full rounded-full bg-white"
-            style={{
-              width: `${Math.min((pointBalance / 4000) * 100, 100)}%`,
-            }}
+            style={{ width: `${Math.min((pointBalance / 4000) * 100, 100)}%` }}
           />
         </div>
-
-        <div className="mt-2 text-[12px] font-bold text-white/75">
-          마이페이지와 동일한 포인트 잔액이에요
-        </div>
+        
       </div>
     </section>
   );
