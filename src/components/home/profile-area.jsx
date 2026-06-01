@@ -9,20 +9,20 @@ const USER_CHAR_KEY = "donbugi_user_char";
 
 export function ProfileArea() {
   const {
-    userNick,
-    setUserNick,
-    userChar,
-    setUserChar,
-    setNotifOpen,
-    notifBadge,
-    setMarketTempOpen,
-    currentKospiStatus,
+     userNick,
+  setUserNick,
+  userChar,
+  setUserChar,
+  setNotifOpen,
+  notifBadge,
+  setMarketTempOpen,
+  currentKospiStatus,
+  economicWeather,
+  setEconomicWeather,
   } = useApp();
 
   const [displayNick, setDisplayNick] = useState(userNick || "닉네임");
   const [displayChar, setDisplayChar] = useState(userChar || CHARS[0]);
-  const [economicWeather, setEconomicWeather] = useState(null);
-
   const kospi = KOSPI_STATUS[currentKospiStatus];
 
   useEffect(() => {

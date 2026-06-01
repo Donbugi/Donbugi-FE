@@ -491,7 +491,7 @@ export function AppProvider({ children }) {
 
 export function useApp() {
   const context = useContext(AppContext);
-
+  const [economicWeather, setEconomicWeather] = useState(null);
   if (!context) {
     throw new Error("useApp must be used within an AppProvider");
   }
