@@ -68,36 +68,31 @@ export const mainApi = {
     return response.data;
   },
 };
-
 export const articleApi = {
-  getLatest: async (limit = 30) => {
-    const response = await apiClient.get("/api/articles/latest", {
+  getArticleDetail: async (articleId) => {
+    const res = await api.get(`/api/articles/${articleId}`);
+    return res.data;
+  },
+
+  getLatestArticles: async (limit = 30) => {
+    const res = await api.get("/api/articles/latest", {
       params: { limit },
     });
-
-    return response.data;
+    return res.data;
   },
 
-  getByCategory: async (perCategory = 10) => {
-    const response = await apiClient.get("/api/articles/by-category", {
+  getArticlesByCategory: async (perCategory = 10) => {
+    const res = await api.get("/api/articles/by-category", {
       params: { perCategory },
     });
-
-    return response.data;
+    return res.data;
   },
 
-  search: async ({ q, limit = 30 }) => {
-    const response = await apiClient.get("/api/articles/search", {
+  searchArticles: async (q, limit = 30) => {
+    const res = await api.get("/api/articles/search", {
       params: { q, limit },
     });
-
-    return response.data;
-  },
-
-  getDetail: async (articleId) => {
-    const response = await apiClient.get(`/api/articles/${articleId}`);
-
-    return response.data;
+    return res.data;
   },
 };
 
