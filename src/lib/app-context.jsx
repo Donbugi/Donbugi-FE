@@ -13,6 +13,7 @@ const USER_ID_KEY = "donbugi_user_id";
 const NICKNAME_KEY = "donbugi_nickname";
 const USER_CHAR_KEY = "donbugi_user_char";
 const CURRENT_TAB_KEY = "donbugi_current_tab";
+const USER_EVENTS_KEY = "donbugi_user_events";
 
 // Character data
 export const CHARS = [
@@ -332,6 +333,25 @@ function loadCurrentTabFromBrowser() {
   return sessionStorage.getItem(CURRENT_TAB_KEY) || "home";
 }
 
+function loadUserEventsFromBrowser() {
+  if (typeof window === "undefined") {
+    return {};
+  }
+
+  const savedEvents = localStorage.getItem(USER_EVENTS_KEY);
+
+  if (!savedEvents) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(savedEvents);
+  } catch (error) {
+    console.error("사용자 일정 불러오기 실패:", error);
+    return {};
+  }
+}
+
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
@@ -349,7 +369,9 @@ export function AppProvider({ children }) {
   const [qDone, setQDone] = useState({});
   const [artQuizDone, setArtQuizDone] = useState({});
 
-  const [userEvents, setUserEvents] = useState({});
+  const [userEvents, setUserEvents] = useState(() =>
+    loadUserEventsFromBrowser()
+  );
 
   const [toastMessage, setToastMessage] = useState("");
   const [toastVisible, setToastVisible] = useState(false);

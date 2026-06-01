@@ -3,9 +3,12 @@
 import { useState } from "react";
 import { useApp } from "@/lib/app-context";
 
+const USER_EVENTS_KEY = "donbugi_user_events";
+
 export function AddEventPopup() {
   const { addEventOpen, setAddEventOpen, userEvents, setUserEvents, toast } =
     useApp();
+
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -13,11 +16,27 @@ export function AddEventPopup() {
 
   if (!addEventOpen) return null;
 
+  const resetForm = () => {
+    setTitle("");
+    setDate("");
+    setTime("");
+    setMemo("");
+  };
+
+  const saveUserEventsToBrowser = (events) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    localStorage.setItem(USER_EVENTS_KEY, JSON.stringify(events));
+  };
+
   const handleSave = () => {
     if (!title.trim()) {
       toast("⚠️ 일정 제목을 입력해주세요.");
       return;
     }
+
     if (!date) {
       toast("⚠️ 날짜를 선택해주세요.");
       return;
@@ -25,27 +44,31 @@ export function AddEventPopup() {
 
     const [y, m, d] = date.split("-").map(Number);
     const key = `${y}-${m}-${d}`;
+
     const newEvents = { ...userEvents };
-    if (!newEvents[key]) newEvents[key] = [];
-    newEvents[key].push({ t: title, tm: time, desc: memo, c: "#7C3AED" });
+
+    if (!newEvents[key]) {
+      newEvents[key] = [];
+    }
+
+    newEvents[key].push({
+      t: title,
+      tm: time,
+      desc: memo,
+      c: "#7C3AED",
+    });
 
     setUserEvents(newEvents);
+    saveUserEventsToBrowser(newEvents);
+
     setAddEventOpen(false);
     toast("✅ 일정이 저장되었어요!");
-
-    // Reset form
-    setTitle("");
-    setDate("");
-    setTime("");
-    setMemo("");
+    resetForm();
   };
 
   const handleCancel = () => {
     setAddEventOpen(false);
-    setTitle("");
-    setDate("");
-    setTime("");
-    setMemo("");
+    resetForm();
   };
 
   return (
@@ -65,6 +88,7 @@ export function AddEventPopup() {
           <div className="text-[13px] font-bold text-[#4a4a6a] mb-1.5">
             일정 제목
           </div>
+
           <input
             type="text"
             value={title}
@@ -79,6 +103,7 @@ export function AddEventPopup() {
             <div className="text-[13px] font-bold text-[#4a4a6a] mb-1.5">
               날짜
             </div>
+
             <input
               type="date"
               value={date}
@@ -86,10 +111,12 @@ export function AddEventPopup() {
               className="w-full border-2 border-[#e8e0ff] rounded-xl p-3 text-sm text-[#1a1a2e] outline-none transition-colors focus:border-[#7C3AED]"
             />
           </div>
+
           <div>
             <div className="text-[13px] font-bold text-[#4a4a6a] mb-1.5">
               시간
             </div>
+
             <input
               type="time"
               value={time}
@@ -103,6 +130,7 @@ export function AddEventPopup() {
           <div className="text-[13px] font-bold text-[#4a4a6a] mb-1.5">
             메모
           </div>
+
           <input
             type="text"
             value={memo}
@@ -114,12 +142,15 @@ export function AddEventPopup() {
 
         <div className="flex gap-2.5 mt-1">
           <button
+            type="button"
             onClick={handleCancel}
             className="flex-1 py-3.5 bg-[#f0e8ff] text-[#7C3AED] border-none rounded-xl text-[15px] font-black cursor-pointer"
           >
             취소
           </button>
+
           <button
+            type="button"
             onClick={handleSave}
             className="flex-[2] py-3.5 bg-gradient-to-r from-[#7C3AED] to-[#3CBBA2] text-white border-none rounded-xl text-[15px] font-black cursor-pointer"
           >
