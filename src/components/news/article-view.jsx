@@ -1,7 +1,8 @@
+//article-view.jsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useApp, ARTS } from "@/lib/app-context";
+import { useApp } from "@/lib/app-context";
 import { HashTag } from "@/components/shared/pill";
 import {  getStoredUserId, pointApi, quizApi, articleApi } from "@/lib/api";
 
@@ -46,7 +47,7 @@ export function ArticleView({ articleId, onBack, onHashtagClick }) {
   const numericArticleId = Number(articleId);
   const canUseApi = Number.isFinite(numericArticleId);
 
-  const [quizzes, setQuizzes] = useState(() => normalizeStaticQuiz(article));
+  const [quizzes, setQuizzes] = useState([]);
   const [isLoadingQuiz, setIsLoadingQuiz] = useState(canUseApi);
   const [quizError, setQuizError] = useState("");
 
@@ -57,10 +58,11 @@ export function ArticleView({ articleId, onBack, onHashtagClick }) {
   useEffect(() => {
       const fetchArticle = async () => {
         try {
+          console.log("articleID: ", articleId)
+
           const data = await articleApi.getArticleDetail(articleId);
 
           console.log("기사 상세", data);
-
           setArticle(data);
         } catch (error) {
           console.error("기사 상세 조회 실패:", error);
@@ -105,9 +107,14 @@ export function ArticleView({ articleId, onBack, onHashtagClick }) {
   }, [article, canUseApi, numericArticleId]);
 
   if (!article) {
-    return null;
+  return (
+    <div className="flex-1 flex items-center justify-center bg-[#F7F3FF]">
+      <div className="text-[#7C3AED] font-bold">
+        기사를 불러오는 중이에요...
+      </div>
+    </div>
+  );
   }
-
   const saveQuizAttempt = async ({
     quiz,
     selectedIndex,
@@ -203,10 +210,7 @@ export function ArticleView({ articleId, onBack, onHashtagClick }) {
       </button>
 
       <article className="mx-4 bg-white rounded-[22px] p-5 shadow-[0_2px_16px_rgba(60,60,120,0.10)]">
-        <div
-          className="inline-flex items-center rounded-full px-3 py-1 text-[12px] font-black mb-3"
-          style={{ color: article.cc, backgroundColor: article.cb }}
-        >
+        <div className="inline-flex items-center rounded-full px-3 py-1 text-[12px] font-black mb-3 text-[#7C3AED] bg-[#F3E8FF]">
           {article.category}
         </div>
 
@@ -253,11 +257,6 @@ export function ArticleView({ articleId, onBack, onHashtagClick }) {
           <h2 className="text-[17px] font-black text-[#1a1a2e]">
             뉴스 퀴즈 (+20P)
           </h2>
-          {canUseApi && (
-            <span className="text-[11px] font-bold text-[#7C3AED]">
-              API 연동
-            </span>
-          )}
         </div>
 
         {isLoadingQuiz && (

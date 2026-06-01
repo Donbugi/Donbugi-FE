@@ -1,3 +1,5 @@
+//news-screen.jsx
+
 "use client"
 
 import { useState } from 'react'

@@ -1,3 +1,5 @@
+//news-scroll.jsx
+
 "use client";
 
 import { useApp } from "@/lib/app-context";
