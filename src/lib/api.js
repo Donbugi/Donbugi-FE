@@ -7,6 +7,20 @@ import apiClient, {
 
 export { clearAuth, getAccessToken, getStoredUserId, saveAuth };
 
+const getTodayDate = () => {
+  return new Date().toISOString().slice(0, 10);
+};
+
+const resolveUserId = (userId) => {
+  const storedUserId = userId || getStoredUserId();
+
+  if (!storedUserId) {
+    throw new Error("userId가 없습니다. 로그인 후 다시 시도해주세요.");
+  }
+
+  return storedUserId;
+};
+
 export const authApi = {
   signup: async ({ email, password }) => {
     const response = await apiClient.post("/api/auth/signup", {
@@ -89,8 +103,10 @@ export const articleApi = {
 
 export const newsInterestApi = {
   saveRead: async ({ userId, category }) => {
+    const targetUserId = resolveUserId(userId);
+
     const response = await apiClient.post("/api/news/interest/read", {
-      userId,
+      userId: targetUserId,
       category,
     });
 
@@ -98,8 +114,13 @@ export const newsInterestApi = {
   },
 
   getTrends: async ({ userId, top = 5 } = {}) => {
+    const targetUserId = resolveUserId(userId);
+
     const response = await apiClient.get("/api/news/interest/trends", {
-      params: { userId, top },
+      params: {
+        userId: targetUserId,
+        top,
+      },
     });
 
     return response.data;
@@ -137,8 +158,10 @@ export const quizApi = {
     correctAnswer,
     explanation,
   }) => {
+    const targetUserId = resolveUserId(userId);
+
     const response = await apiClient.post("/api/quiz/stats/attempt", {
-      userId,
+      userId: targetUserId,
       correct,
       question,
       userAnswer,
@@ -150,8 +173,12 @@ export const quizApi = {
   },
 
   getDashboard: async ({ userId } = {}) => {
+    const targetUserId = resolveUserId(userId);
+
     const response = await apiClient.get("/api/quiz/stats/dashboard", {
-      params: { userId },
+      params: {
+        userId: targetUserId,
+      },
     });
 
     return response.data;
@@ -166,68 +193,68 @@ export const pointApi = {
   },
 
   getBalance: async (userId) => {
+    const targetUserId = resolveUserId(userId);
+
     const response = await apiClient.get("/api/points/balance", {
-      params: { userId },
-    });
-
-    return response.data;
-  },
-
-  earn: async ({ userId, amount, title, detail }) => {
-    const response = await apiClient.post("/api/points/earn", {
-      userId,
-      amount,
-      title,
-      detail,
-    });
-
-    return response.data;
-  },
-
-  getMonthlySummary: async ({ userId, year, month }) => {
-    const response = await apiClient.get("/api/points/monthly-summary", {
       params: {
-        userId,
-        year,
-        month,
+        userId: targetUserId,
       },
     });
 
     return response.data;
   },
 
+  getMonthlySummary: async ({ userId, year, month } = {}) => {
+    const targetUserId = resolveUserId(userId);
+
+    const params = {
+      userId: targetUserId,
+    };
+
+    if (year && month) {
+      params.year = year;
+      params.month = month;
+    }
+
+    const response = await apiClient.get("/api/points/monthly-summary", {
+      params,
+    });
+
+    return response.data;
+  },
+
   getRecentActivity: async (userId) => {
+    const targetUserId = resolveUserId(userId);
+
     const response = await apiClient.get("/api/points/recent-activity", {
-      params: { userId },
+      params: {
+        userId: targetUserId,
+      },
     });
 
     return response.data;
   },
 
-  redeem: async ({ userId, email, benefitCode }) => {
-    const response = await apiClient.post("/api/points/redeem", {
-      userId,
-      email,
-      benefitCode,
-    });
+  checkAttendance: async ({ userId, date } = {}) => {
+    const targetUserId = resolveUserId(userId);
 
-    return response.data;
-  },
-
-  checkAttendance: async ({ userId, date }) => {
     const response = await apiClient.post("/api/points/rewards/attendance", {
-      userId,
-      date,
+      userId: targetUserId,
+      date: date || getTodayDate(),
     });
 
     return response.data;
   },
 
   getAttendanceStatus: async (userId) => {
+    const targetUserId = resolveUserId(userId);
+
     const response = await apiClient.get(
       "/api/points/rewards/attendance/status",
       {
-        params: { userId },
+        params: {
+          userId: targetUserId,
+        },
       }
     );
 
@@ -235,8 +262,10 @@ export const pointApi = {
   },
 
   rewardDailyQuiz: async ({ userId, sessionId, results }) => {
+    const targetUserId = resolveUserId(userId);
+
     const response = await apiClient.post("/api/points/rewards/daily-quiz", {
-      userId,
+      userId: targetUserId,
       sessionId,
       results,
     });
@@ -245,13 +274,27 @@ export const pointApi = {
   },
 
   rewardNewsDetailQuiz: async ({ userId, articleId }) => {
+    const targetUserId = resolveUserId(userId);
+
     const response = await apiClient.post(
       "/api/points/rewards/news-detail-quiz",
       {
-        userId,
+        userId: targetUserId,
         articleId,
       }
     );
+
+    return response.data;
+  },
+
+  redeem: async ({ userId, email, benefitCode }) => {
+    const targetUserId = resolveUserId(userId);
+
+    const response = await apiClient.post("/api/points/redeem", {
+      userId: targetUserId,
+      email,
+      benefitCode,
+    });
 
     return response.data;
   },
