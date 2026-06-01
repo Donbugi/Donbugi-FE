@@ -1,252 +1,272 @@
-const API_BASE_URL = "https://donbugi.xyz";
+import apiClient, {
+  clearAuth,
+  getAccessToken,
+  getStoredUserId,
+  saveAuth,
+} from "./axios";
 
-export const TOKEN_KEY = "donbugi_access_token";
-export const USER_ID_KEY = "donbugi_user_id";
-
-export function getAccessToken() {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-export function getStoredUserId() {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  return localStorage.getItem(USER_ID_KEY);
-}
-
-export function saveAuth({ accessToken, userId }) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  if (accessToken) {
-    localStorage.setItem(TOKEN_KEY, accessToken);
-  }
-
-  if (userId) {
-    localStorage.setItem(USER_ID_KEY, userId);
-  }
-}
-
-export function clearAuth() {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_ID_KEY);
-}
-
-async function request(path, options = {}) {
-  const token = getAccessToken();
-
-  const headers = {
-    "Content-Type": "application/json",
-    ...(options.headers || {}),
-  };
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
-
-  const contentType = response.headers.get("content-type");
-  const isJson = contentType && contentType.includes("application/json");
-  const data = isJson ? await response.json() : await response.text();
-
-  if (!response.ok) {
-    const message =
-      typeof data === "object" && data !== null
-        ? data.message || data.error || "API 요청에 실패했습니다."
-        : data || "API 요청에 실패했습니다.";
-
-    throw new Error(message);
-  }
-
-  return data;
-}
+export { clearAuth, getAccessToken, getStoredUserId, saveAuth };
 
 export const authApi = {
-  signup: ({ email, password }) =>
-    request("/api/auth/signup", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    }),
+  signup: async ({ email, password }) => {
+    const response = await apiClient.post("/api/auth/signup", {
+      email,
+      password,
+    });
 
-  login: ({ email, password }) =>
-    request("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    }),
+    return response.data;
+  },
 
-  getMe: () => request("/api/auth/me"),
+  login: async ({ email, password }) => {
+    const response = await apiClient.post("/api/auth/login", {
+      email,
+      password,
+    });
 
-  updateMe: ({ nickname }) =>
-    request("/api/auth/me", {
-      method: "PATCH",
-      body: JSON.stringify({ nickname }),
-    }),
+    return response.data;
+  },
+
+  getMe: async () => {
+    const response = await apiClient.get("/api/auth/me");
+
+    return response.data;
+  },
+
+  updateMe: async ({ nickname }) => {
+    const response = await apiClient.patch("/api/auth/me", {
+      nickname,
+    });
+
+    return response.data;
+  },
 };
 
 export const mainApi = {
-  getEconomicWeather: () => request("/api/main/economic-weather"),
+  getEconomicWeather: async () => {
+    const response = await apiClient.get("/api/main/economic-weather");
 
-  getKospi: () => request("/api/main/kospi"),
+    return response.data;
+  },
+
+  getKospi: async () => {
+    const response = await apiClient.get("/api/main/kospi");
+
+    return response.data;
+  },
 };
 
 export const articleApi = {
-  getLatest: (limit = 30) =>
-    request(`/api/articles/latest?limit=${encodeURIComponent(limit)}`),
+  getLatest: async (limit = 30) => {
+    const response = await apiClient.get("/api/articles/latest", {
+      params: { limit },
+    });
 
-  getByCategory: (perCategory = 10) =>
-    request(
-      `/api/articles/by-category?perCategory=${encodeURIComponent(perCategory)}`
-    ),
+    return response.data;
+  },
 
-  search: ({ q, limit = 30 }) =>
-    request(
-      `/api/articles/search?q=${encodeURIComponent(q)}&limit=${encodeURIComponent(
-        limit
-      )}`
-    ),
+  getByCategory: async (perCategory = 10) => {
+    const response = await apiClient.get("/api/articles/by-category", {
+      params: { perCategory },
+    });
 
-  getDetail: (articleId) => request(`/api/articles/${articleId}`),
+    return response.data;
+  },
+
+  search: async ({ q, limit = 30 }) => {
+    const response = await apiClient.get("/api/articles/search", {
+      params: { q, limit },
+    });
+
+    return response.data;
+  },
+
+  getDetail: async (articleId) => {
+    const response = await apiClient.get(`/api/articles/${articleId}`);
+
+    return response.data;
+  },
 };
 
 export const newsInterestApi = {
-  saveRead: ({ userId, category }) =>
-    request("/api/news/interest/read", {
-      method: "POST",
-      body: JSON.stringify({ userId, category }),
-    }),
+  saveRead: async ({ userId, category }) => {
+    const response = await apiClient.post("/api/news/interest/read", {
+      userId,
+      category,
+    });
 
-  getTrends: ({ userId, top = 5 } = {}) => {
-    const params = new URLSearchParams();
+    return response.data;
+  },
 
-    if (userId) {
-      params.set("userId", userId);
-    }
+  getTrends: async ({ userId, top = 5 } = {}) => {
+    const response = await apiClient.get("/api/news/interest/trends", {
+      params: { userId, top },
+    });
 
-    params.set("top", String(top));
-
-    return request(`/api/news/interest/trends?${params.toString()}`);
+    return response.data;
   },
 };
 
 export const quizApi = {
-  getArticleQuiz: (articleId) => request(`/api/quiz/${articleId}`),
+  getArticleQuiz: async (articleId) => {
+    const response = await apiClient.get(`/api/quiz/${articleId}`);
 
-  getRandom: (size = 3) =>
-    request(`/api/quiz/random?size=${encodeURIComponent(size)}`),
+    return response.data;
+  },
 
-  getRandomSession: (size = 3) =>
-    request(`/api/quiz/random-session?size=${encodeURIComponent(size)}`),
+  getRandom: async (size = 3) => {
+    const response = await apiClient.get("/api/quiz/random", {
+      params: { size },
+    });
 
-  saveAttempt: ({
+    return response.data;
+  },
+
+  getRandomSession: async (size = 3) => {
+    const response = await apiClient.get("/api/quiz/random-session", {
+      params: { size },
+    });
+
+    return response.data;
+  },
+
+  saveAttempt: async ({
     userId,
     correct,
     question,
     userAnswer,
     correctAnswer,
     explanation,
-  }) =>
-    request("/api/quiz/stats/attempt", {
-      method: "POST",
-      body: JSON.stringify({
-        userId,
-        correct,
-        question,
-        userAnswer,
-        correctAnswer,
-        explanation,
-      }),
-    }),
+  }) => {
+    const response = await apiClient.post("/api/quiz/stats/attempt", {
+      userId,
+      correct,
+      question,
+      userAnswer,
+      correctAnswer,
+      explanation,
+    });
 
-  getDashboard: ({ userId } = {}) => {
-    const params = new URLSearchParams();
+    return response.data;
+  },
 
-    if (userId) {
-      params.set("userId", userId);
-    }
+  getDashboard: async ({ userId } = {}) => {
+    const response = await apiClient.get("/api/quiz/stats/dashboard", {
+      params: { userId },
+    });
 
-    const queryString = params.toString();
-
-    return request(
-      queryString
-        ? `/api/quiz/stats/dashboard?${queryString}`
-        : "/api/quiz/stats/dashboard"
-    );
+    return response.data;
   },
 };
 
 export const pointApi = {
-  getBenefits: () => request("/api/point-benefits"),
+  getBenefits: async () => {
+    const response = await apiClient.get("/api/point-benefits");
 
-  getBalance: (userId) =>
-    request(`/api/points/balance?userId=${encodeURIComponent(userId)}`),
+    return response.data;
+  },
 
-  earn: ({ userId, amount, title, detail }) =>
-    request("/api/points/earn", {
-      method: "POST",
-      body: JSON.stringify({ userId, amount, title, detail }),
-    }),
+  getBalance: async (userId) => {
+    const response = await apiClient.get("/api/points/balance", {
+      params: { userId },
+    });
 
-  getMonthlySummary: ({ userId, year, month }) =>
-    request(
-      `/api/points/monthly-summary?userId=${encodeURIComponent(
-        userId
-      )}&year=${encodeURIComponent(year)}&month=${encodeURIComponent(month)}`
-    ),
+    return response.data;
+  },
 
-  getRecentActivity: (userId) =>
-    request(`/api/points/recent-activity?userId=${encodeURIComponent(userId)}`),
+  earn: async ({ userId, amount, title, detail }) => {
+    const response = await apiClient.post("/api/points/earn", {
+      userId,
+      amount,
+      title,
+      detail,
+    });
 
-  redeem: ({ userId, email, benefitCode }) =>
-    request("/api/points/redeem", {
-      method: "POST",
-      body: JSON.stringify({ userId, email, benefitCode }),
-    }),
+    return response.data;
+  },
 
-  checkAttendance: ({ userId, date }) =>
-    request("/api/points/rewards/attendance", {
-      method: "POST",
-      body: JSON.stringify({ userId, date }),
-    }),
+  getMonthlySummary: async ({ userId, year, month }) => {
+    const response = await apiClient.get("/api/points/monthly-summary", {
+      params: {
+        userId,
+        year,
+        month,
+      },
+    });
 
-  getAttendanceStatus: (userId) =>
-    request(
-      `/api/points/rewards/attendance/status?userId=${encodeURIComponent(
-        userId
-      )}`
-    ),
+    return response.data;
+  },
 
-  rewardDailyQuiz: ({ userId, sessionId, results }) =>
-    request("/api/points/rewards/daily-quiz", {
-      method: "POST",
-      body: JSON.stringify({ userId, sessionId, results }),
-    }),
+  getRecentActivity: async (userId) => {
+    const response = await apiClient.get("/api/points/recent-activity", {
+      params: { userId },
+    });
 
-  rewardNewsDetailQuiz: ({ userId, articleId }) =>
-    request("/api/points/rewards/news-detail-quiz", {
-      method: "POST",
-      body: JSON.stringify({ userId, articleId }),
-    }),
+    return response.data;
+  },
+
+  redeem: async ({ userId, email, benefitCode }) => {
+    const response = await apiClient.post("/api/points/redeem", {
+      userId,
+      email,
+      benefitCode,
+    });
+
+    return response.data;
+  },
+
+  checkAttendance: async ({ userId, date }) => {
+    const response = await apiClient.post("/api/points/rewards/attendance", {
+      userId,
+      date,
+    });
+
+    return response.data;
+  },
+
+  getAttendanceStatus: async (userId) => {
+    const response = await apiClient.get(
+      "/api/points/rewards/attendance/status",
+      {
+        params: { userId },
+      }
+    );
+
+    return response.data;
+  },
+
+  rewardDailyQuiz: async ({ userId, sessionId, results }) => {
+    const response = await apiClient.post("/api/points/rewards/daily-quiz", {
+      userId,
+      sessionId,
+      results,
+    });
+
+    return response.data;
+  },
+
+  rewardNewsDetailQuiz: async ({ userId, articleId }) => {
+    const response = await apiClient.post(
+      "/api/points/rewards/news-detail-quiz",
+      {
+        userId,
+        articleId,
+      }
+    );
+
+    return response.data;
+  },
 };
 
 export const notificationApi = {
-  getNotifications: () => request("/api/notifications"),
+  getNotifications: async () => {
+    const response = await apiClient.get("/api/notifications");
 
-  readAll: () =>
-    request("/api/notifications/read-all", {
-      method: "PATCH",
-    }),
+    return response.data;
+  },
+
+  readAll: async () => {
+    const response = await apiClient.patch("/api/notifications/read-all");
+
+    return response.data;
+  },
 };

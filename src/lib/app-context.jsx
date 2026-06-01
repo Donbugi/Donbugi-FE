@@ -1,6 +1,17 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+
+const TOKEN_KEY = "donbugi_access_token";
+const NICKNAME_KEY = "donbugi_nickname";
+const USER_CHAR_KEY = "donbugi_user_char";
+const CURRENT_TAB_KEY = "donbugi_current_tab";
 
 // Character data
 export const CHARS = [
@@ -285,46 +296,118 @@ export const SYS_EVS = {
   ],
 };
 
+function loadNicknameFromBrowser() {
+  if (typeof window === "undefined") {
+    return "닉네임";
+  }
+
+  return localStorage.getItem(NICKNAME_KEY) || "닉네임";
+}
+
+function loadCharacterFromBrowser() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const savedCharacter = localStorage.getItem(USER_CHAR_KEY);
+
+  if (!savedCharacter) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(savedCharacter);
+  } catch (error) {
+    console.error("캐릭터 정보 불러오기 실패:", error);
+    return null;
+  }
+}
+
+function loadCurrentTabFromBrowser() {
+  if (typeof window === "undefined") {
+    return "home";
+  }
+
+  return localStorage.getItem(CURRENT_TAB_KEY) || "home";
+}
+
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
-  // App state
+  const [isReady, setIsReady] = useState(false);
+
   const [currentScreen, setCurrentScreen] = useState("auth");
-  const [currentTab, setCurrentTab] = useState("home");
+  const [currentTabState, setCurrentTabState] = useState("home");
 
-  // User state
-  const [userNick, setUserNick] = useState("닉네임");
-  const [userChar, setUserChar] = useState(null);
+  const [userNick, setUserNickState] = useState("닉네임");
+  const [userChar, setUserCharState] = useState(null);
 
-  // Onboarding state
   const [obStep, setObStep] = useState(0);
   const [obScores, setObScores] = useState([0, 0, 0, 0]);
 
-  // Quiz state
   const [qDone, setQDone] = useState({});
   const [artQuizDone, setArtQuizDone] = useState({});
 
-  // Calendar state
   const [userEvents, setUserEvents] = useState({});
 
-  // Toast state
   const [toastMessage, setToastMessage] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
 
-  // Notification state
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifBadge, setNotifBadge] = useState(2);
 
-  // Market temp popup
   const [marketTempOpen, setMarketTempOpen] = useState(false);
   const [currentKospiStatus, setCurrentKospiStatus] = useState("sunny");
 
-  // Alert popup (shop)
   const [alertPopOpen, setAlertPopOpen] = useState(false);
   const [alertPopData, setAlertPopData] = useState({});
 
-  // Add event popup
   const [addEventOpen, setAddEventOpen] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const savedNickname = loadNicknameFromBrowser();
+    const savedCharacter = loadCharacterFromBrowser();
+    const savedTab = loadCurrentTabFromBrowser();
+
+    setUserNickState(savedNickname);
+    setUserCharState(savedCharacter);
+
+    if (token) {
+      setCurrentScreen("main");
+      setCurrentTabState(savedTab);
+    } else {
+      setCurrentScreen("auth");
+      setCurrentTabState("home");
+      localStorage.removeItem(CURRENT_TAB_KEY);
+    }
+
+    setIsReady(true);
+  }, []);
+
+  const setCurrentTab = useCallback((tab) => {
+    setCurrentTabState(tab);
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem(CURRENT_TAB_KEY, tab);
+    }
+  }, []);
+
+  const setUserNick = useCallback((nickname) => {
+    setUserNickState(nickname);
+
+    if (typeof window !== "undefined" && nickname && nickname !== "닉네임") {
+      localStorage.setItem(NICKNAME_KEY, nickname);
+    }
+  }, []);
+
+  const setUserChar = useCallback((character) => {
+    setUserCharState(character);
+
+    if (typeof window !== "undefined" && character) {
+      localStorage.setItem(USER_CHAR_KEY, JSON.stringify(character));
+    }
+  }, []);
 
   const toast = useCallback((msg) => {
     setToastMessage(msg);
@@ -336,65 +419,61 @@ export function AppProvider({ children }) {
     setCurrentScreen(screen);
   }, []);
 
-  const goToTab = useCallback((tab) => {
-    setCurrentTab(tab);
-    setCurrentScreen("main");
-  }, []);
+  const goToTab = useCallback(
+    (tab) => {
+      setCurrentTab(tab);
+      setCurrentScreen("main");
+    },
+    [setCurrentTab]
+  );
 
   const value = {
-    // Screen navigation
+    isReady,
+
     currentScreen,
     setCurrentScreen,
-    currentTab,
+    currentTab: currentTabState,
     setCurrentTab,
     goToScreen,
     goToTab,
 
-    // User
     userNick,
     setUserNick,
     userChar,
     setUserChar,
 
-    // Onboarding
     obStep,
     setObStep,
     obScores,
     setObScores,
 
-    // Quiz
     qDone,
     setQDone,
     artQuizDone,
     setArtQuizDone,
 
-    // Calendar
     userEvents,
     setUserEvents,
 
-    // Toast
     toast,
     toastMessage,
     toastVisible,
 
-    // Notifications
     notifOpen,
     setNotifOpen,
     notifBadge,
     setNotifBadge,
 
-    // Market temp
     marketTempOpen,
     setMarketTempOpen,
     currentKospiStatus,
+    setCurrentKospiStatus,
 
-    // Alert popup
     alertPopOpen,
     setAlertPopOpen,
     alertPopData,
     setAlertPopData,
 
-    // Add event
     addEventOpen,
     setAddEventOpen,
   };
@@ -404,8 +483,10 @@ export function AppProvider({ children }) {
 
 export function useApp() {
   const context = useContext(AppContext);
+
   if (!context) {
     throw new Error("useApp must be used within an AppProvider");
   }
+
   return context;
 }
